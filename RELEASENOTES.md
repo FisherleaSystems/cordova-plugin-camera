@@ -20,6 +20,9 @@
 -->
 # Release Notes
 
+### 6.0.0 (Feb 8, 2023)
+* This is now a namespaced (@fisherleasystems) version of the camera plugin.
+
 ### 6.0.0 (Aug 19, 2021)
 
 **Feature:**

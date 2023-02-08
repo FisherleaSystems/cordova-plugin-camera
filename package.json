@@ -1,5 +1,5 @@
 {
-  "name": "cordova-plugin-camera",
+  "name": "@fisherleasystems/cordova-plugin-camera",
   "version": "6.0.0",
   "description": "Cordova Camera Plugin",
   "types": "./types/index.d.ts",
@@ -13,8 +13,8 @@
       "osx"
     ]
   },
-  "repository": "github:apache/cordova-plugin-camera",
-  "bugs": "https://github.com/apache/cordova-plugin-camera/issues",
+  "repository": "github:FisherleaSystems/cordova-plugin-camera",
+  "bugs": "https://github.com/FisherleaSystems/cordova-plugin-camera/issues",
   "keywords": [
     "cordova",
     "camera",
@@ -31,34 +31,14 @@
   },
   "author": "Apache Software Foundation",
   "license": "Apache-2.0",
-  "engines": {
-    "cordovaDependencies": {
-      "3.0.0": {
-        "cordova-android": ">=6.3.0"
-      },
-      "4.1.0": {
-        "cordova-android": ">=6.3.0",
-        "cordova": ">=7.1.0"
-      },
-      "5.0.0": {
-        "cordova-android": ">=9.0.0",
-        "cordova-ios": ">=5.1.0",
-        "cordova": ">=9.0.0"
-      },
-      "5.0.4-dev": {
-        "cordova-android": "<10.0.0",
-        "cordova-ios": ">=5.1.0",
-        "cordova": ">=9.0.0"
-      },
-      "6.0.0": {
-        "cordova-android": ">=10.0.0",
-        "cordova-ios": ">=5.1.0",
-        "cordova": ">=9.0.0"
-      },
-      "7.0.0": {
-        "cordova": ">100"
-      }
+  "maintainers": [
+    {
+      "name": "Wayne Fisher",
+      "email": "wayne@fisherlea.com"
     }
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/FisherleaSystems"
   },
   "devDependencies": {
     "@cordova/eslint-config": "^3.0.0"
