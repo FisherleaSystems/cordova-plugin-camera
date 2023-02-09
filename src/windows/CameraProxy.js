@@ -70,11 +70,14 @@ var windowsPhoneVideoContainers = ['.avi', '.3gp', '.3g2', '.wmv', '.3gp', '.3g2
 // Default aspect ratio 1.78 (16:9 hd video standard)
 var DEFAULT_ASPECT_RATIO = '1.8';
 
+// Default image quality for conversion to DataURL.
+var DEFAULT_IMAGE_QUALITY = 75;
+
 // Highest possible z-index supported across browsers. Anything used above is converted to this value.
 var HIGHEST_POSSIBLE_Z_INDEX = 2147483647;
 
 // Resize method
-function resizeImage (successCallback, errorCallback, file, targetWidth, targetHeight, encodingType) {
+function resizeImage (successCallback, errorCallback, file, targetWidth, targetHeight, encodingType, quality) {
     var tempPhotoFileName = '';
     var targetContentType = '';
     var temporaryStorageFile;
@@ -86,6 +89,11 @@ function resizeImage (successCallback, errorCallback, file, targetWidth, targetH
         tempPhotoFileName = 'camera_cordova_temp_return.jpg';
         targetContentType = 'image/jpeg';
     }
+
+    if (typeof quality !== 'number') {
+        quality = DEFAULT_IMAGE_QUALITY;
+    }
+    quality /= 100;
 
     var storageFolder = getAppData().temporaryFolder;
     file.copyAsync(storageFolder, file.name, Windows.Storage.NameCollisionOption.generateUniqueName)
@@ -111,7 +119,7 @@ function resizeImage (successCallback, errorCallback, file, targetWidth, targetH
 
                 canvas.getContext('2d').drawImage(this, 0, 0, imageWidth, imageHeight);
 
-                var fileContent = canvas.toDataURL(targetContentType).split(',')[1];
+                var fileContent = canvas.toDataURL(targetContentType, quality).split(',')[1];
 
                 var storageFolder = getAppData().localFolder;
 
@@ -135,7 +143,12 @@ function resizeImage (successCallback, errorCallback, file, targetWidth, targetH
 }
 
 // Because of asynchronous method, so let the successCallback be called in it.
-function resizeImageBase64 (successCallback, errorCallback, file, targetWidth, targetHeight) {
+function resizeImageBase64 (successCallback, errorCallback, file, targetWidth, targetHeight, quality) {
+    if (typeof quality !== 'number') {
+        quality = DEFAULT_IMAGE_QUALITY;
+    }
+    quality /= 100;
+
     fileIO.readBufferAsync(file).done(function (buffer) {
         var strBase64 = encodeToBase64String(buffer);
         var imageData = 'data:' + file.contentType + ';base64,' + strBase64;
@@ -156,7 +169,7 @@ function resizeImageBase64 (successCallback, errorCallback, file, targetWidth, t
             ctx.drawImage(this, 0, 0, imageWidth, imageHeight);
 
             // The resized file ready for upload
-            var finalFile = canvas.toDataURL(file.contentType);
+            var finalFile = canvas.toDataURL(file.contentType, quality);
 
             // Remove the prefix such as "data:" + contentType + ";base64," , in order to meet the Cordova API.
             var arr = finalFile.split(',');
@@ -177,6 +190,7 @@ function takePictureFromFile (successCallback, errorCallback, args) {
 
 function takePictureFromFileWP (successCallback, errorCallback, args) {
     var mediaType = args[6];
+    var quality = args[0];
     var destinationType = args[1];
     var targetWidth = args[3];
     var targetHeight = args[4];
@@ -197,7 +211,7 @@ function takePictureFromFileWP (successCallback, errorCallback, args) {
             }
             if (destinationType === Camera.DestinationType.FILE_URI) {
                 if (targetHeight > 0 && targetWidth > 0) {
-                    resizeImage(successCallback, errorCallback, file, targetWidth, targetHeight, encodingType);
+                    resizeImage(successCallback, errorCallback, file, targetWidth, targetHeight, encodingType, quality);
                 } else {
                     var storageFolder = getAppData().localFolder;
                     file.copyAsync(storageFolder, file.name, Windows.Storage.NameCollisionOption.replaceExisting).done(function (storageFile) {
@@ -208,7 +222,7 @@ function takePictureFromFileWP (successCallback, errorCallback, args) {
                 }
             } else {
                 if (targetHeight > 0 && targetWidth > 0) {
-                    resizeImageBase64(successCallback, errorCallback, file, targetWidth, targetHeight);
+                    resizeImageBase64(successCallback, errorCallback, file, targetWidth, targetHeight, quality);
                 } else {
                     fileIO.readBufferAsync(file).done(function (buffer) {
                         var strBase64 = encodeToBase64String(buffer);
@@ -238,6 +252,7 @@ function takePictureFromFileWP (successCallback, errorCallback, args) {
 
 function takePictureFromFileWindows (successCallback, errorCallback, args) {
     var mediaType = args[6];
+    var quality = args[0];
     var destinationType = args[1];
     var targetWidth = args[3];
     var targetHeight = args[4];
@@ -262,7 +277,7 @@ function takePictureFromFileWindows (successCallback, errorCallback, args) {
         }
         if (destinationType === Camera.DestinationType.FILE_URI) {
             if (targetHeight > 0 && targetWidth > 0) {
-                resizeImage(successCallback, errorCallback, file, targetWidth, targetHeight, encodingType);
+                resizeImage(successCallback, errorCallback, file, targetWidth, targetHeight, encodingType, quality);
             } else {
                 var storageFolder = getAppData().localFolder;
                 file.copyAsync(storageFolder, file.name, Windows.Storage.NameCollisionOption.replaceExisting).done(function (storageFile) {
@@ -273,7 +288,7 @@ function takePictureFromFileWindows (successCallback, errorCallback, args) {
             }
         } else {
             if (targetHeight > 0 && targetWidth > 0) {
-                resizeImageBase64(successCallback, errorCallback, file, targetWidth, targetHeight);
+                resizeImageBase64(successCallback, errorCallback, file, targetWidth, targetHeight, quality);
             } else {
                 fileIO.readBufferAsync(file).done(function (buffer) {
                     var strBase64 = encodeToBase64String(buffer);
@@ -686,6 +701,7 @@ function takePictureFromCameraWP (successCallback, errorCallback, args) {
 }
 
 function takePictureFromCameraWindows (successCallback, errorCallback, args) {
+    var quality = args[0];
     var destinationType = args[1];
     var targetWidth = args[3];
     var targetHeight = args[4];
@@ -735,6 +751,7 @@ function takePictureFromCameraWindows (successCallback, errorCallback, args) {
         window.removeEventListener('focus', savePhotoOnFocus);
         // call only when the app is in focus again
         savePhoto(cameraPicture, {
+            quality: quality,
             destinationType: destinationType,
             targetHeight: targetHeight,
             targetWidth: targetWidth,
@@ -760,6 +777,7 @@ function takePictureFromCameraWindows (successCallback, errorCallback, args) {
         // If not windows 10, call savePhoto() now. If windows 10, wait for the app to be in focus again
         if (navigator.appVersion.indexOf('Windows Phone 10.0') < 0) {
             savePhoto(cameraPicture, {
+                quality: quality,
                 destinationType: destinationType,
                 targetHeight: targetHeight,
                 targetWidth: targetWidth,
@@ -786,7 +804,7 @@ function savePhoto (picture, options, successCallback, errorCallback) {
                         // Still a success even if we cannot delete the original file since we do have the new file.
                         successCallback(uri);
                     });
-                }, errorCallback, picture, options.targetWidth, options.targetHeight, options.encodingType);
+                }, errorCallback, picture, options.targetWidth, options.targetHeight, options.encodingType, options.quality);
             } else {
                 // CB-11714: check if target content-type is PNG to just rename as *.jpg since camera is captured as JPEG
                 if (options.encodingType === Camera.EncodingType.PNG) {
@@ -813,7 +831,7 @@ function savePhoto (picture, options, successCallback, errorCallback) {
                         // Still a success even if we cannot delete the original file since we do have the encoded data.
                         successCallback(uri);
                     });
-                }, errorCallback, picture, options.targetWidth, options.targetHeight);
+                }, errorCallback, picture, options.targetWidth, options.targetHeight, options.quality);
             } else {
                 fileIO.readBufferAsync(picture).done(function (buffer) {
                     var strBase64 = encodeToBase64String(buffer);
