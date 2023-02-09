@@ -143,7 +143,13 @@ function resizeImage (successCallback, errorCallback, file, targetWidth, targetH
 }
 
 // Because of asynchronous method, so let the successCallback be called in it.
-function resizeImageBase64 (successCallback, errorCallback, file, targetWidth, targetHeight, quality) {
+function resizeImageBase64 (successCallback, errorCallback, file, targetWidth, targetHeight, encodingType, quality) {
+    var targetContentType = 'image/jpeg';
+
+    if (encodingType === Camera.EncodingType.PNG) {
+        targetContentType = 'image/png';
+    }
+
     if (typeof quality !== 'number') {
         quality = DEFAULT_IMAGE_QUALITY;
     }
@@ -169,7 +175,7 @@ function resizeImageBase64 (successCallback, errorCallback, file, targetWidth, t
             ctx.drawImage(this, 0, 0, imageWidth, imageHeight);
 
             // The resized file ready for upload
-            var finalFile = canvas.toDataURL(file.contentType, quality);
+            var finalFile = canvas.toDataURL(targetContentType, quality);
 
             // Remove the prefix such as "data:" + contentType + ";base64," , in order to meet the Cordova API.
             var arr = finalFile.split(',');
@@ -222,7 +228,7 @@ function takePictureFromFileWP (successCallback, errorCallback, args) {
                 }
             } else {
                 if (targetHeight > 0 && targetWidth > 0) {
-                    resizeImageBase64(successCallback, errorCallback, file, targetWidth, targetHeight, quality);
+                    resizeImageBase64(successCallback, errorCallback, file, targetWidth, targetHeight, encodingType, quality);
                 } else {
                     fileIO.readBufferAsync(file).done(function (buffer) {
                         var strBase64 = encodeToBase64String(buffer);
@@ -288,7 +294,7 @@ function takePictureFromFileWindows (successCallback, errorCallback, args) {
             }
         } else {
             if (targetHeight > 0 && targetWidth > 0) {
-                resizeImageBase64(successCallback, errorCallback, file, targetWidth, targetHeight, quality);
+                resizeImageBase64(successCallback, errorCallback, file, targetWidth, targetHeight, encodingType, quality);
             } else {
                 fileIO.readBufferAsync(file).done(function (buffer) {
                     var strBase64 = encodeToBase64String(buffer);
@@ -831,7 +837,7 @@ function savePhoto (picture, options, successCallback, errorCallback) {
                         // Still a success even if we cannot delete the original file since we do have the encoded data.
                         successCallback(uri);
                     });
-                }, errorCallback, picture, options.targetWidth, options.targetHeight, options.quality);
+                }, errorCallback, picture, options.targetWidth, options.targetHeight, options.encodingType, options.quality);
             } else {
                 fileIO.readBufferAsync(picture).done(function (buffer) {
                     var strBase64 = encodeToBase64String(buffer);
