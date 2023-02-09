@@ -106,6 +106,9 @@ function resizeImage (successCallback, errorCallback, file, targetWidth, targetH
             var imageData = 'data:' + file.contentType + ';base64,' + strBase64;
             var image = new Image(); /* eslint no-undef : 0 */
             image.src = imageData;
+
+            image.onerror = function (err) { errorCallback(err); };
+
             image.onload = function () {
                 var ratio = Math.min(targetWidth / this.width, targetHeight / this.height);
                 var imageWidth = ratio * this.width;
@@ -161,6 +164,8 @@ function resizeImageBase64 (successCallback, errorCallback, file, targetWidth, t
 
         var image = new Image(); /* eslint no-undef : 0 */
         image.src = imageData;
+
+        image.onerror = function (err) { errorCallback(err); };
 
         image.onload = function () {
             var ratio = Math.min(targetWidth / this.width, targetHeight / this.height);
