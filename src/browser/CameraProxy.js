@@ -37,15 +37,11 @@ function takePicture (success, error, opts) {
         input.style.visibility = 'hidden';
         input.className = 'cordova-camera-select';
         input.type = 'file';
-        input.name = 'files[]';
 
         input.onchange = function (inputEvent) {
             var reader = new FileReader(); /* eslint no-undef : 0 */
             reader.onload = function (readerEvent) {
                 var convert = false;
-
-                input.parentNode.removeChild(input);
-
                 var data = readerEvent.target.result;
 
                 // Strip off the start of the string.
@@ -106,7 +102,14 @@ function takePicture (success, error, opts) {
                 }
             };
 
-            reader.readAsDataURL(inputEvent.target.files[0]);
+            if (inputEvent.target.files.length) {
+                reader.readAsDataURL(inputEvent.target.files[0]);
+            } else {
+                error('No file selected by user.');
+            }
+
+            // Remove the input from the DOM.
+            input.parentNode.removeChild(input);
         };
 
         document.body.appendChild(input);
@@ -139,19 +142,38 @@ function capture (success, errorCallback, opts) {
     targetHeight = targetHeight === -1 ? 240 : targetHeight;
 
     var video = document.createElement('video');
-    var button = document.createElement('button');
+    var buttonCancel = document.createElement('button');
+    var buttonCapture = document.createElement('button');
     var parent = document.createElement('div');
+
     parent.style.position = 'relative';
     parent.style.zIndex = HIGHEST_POSSIBLE_Z_INDEX;
     parent.className = 'cordova-camera-capture';
     parent.appendChild(video);
-    parent.appendChild(button);
+    parent.appendChild(buttonCancel);
+    parent.appendChild(buttonCapture);
 
     video.width = targetWidth;
     video.height = targetHeight;
-    button.innerHTML = 'Capture!';
+    buttonCancel.innerHTML = 'Cancel';
+    buttonCapture.innerHTML = 'Capture';
 
-    button.onclick = function () {
+    buttonCancel.onclick = function () {
+        // stop video stream, remove video and buttons.
+        // Note that MediaStream.stop() is deprecated as of Chrome 47.
+        if (localMediaStream.stop) {
+            localMediaStream.stop();
+        } else {
+            localMediaStream.getTracks().forEach(function (track) {
+                track.stop();
+            });
+        }
+        parent.parentNode.removeChild(parent);
+
+        return errorCallback('User did not take a picture.');
+    };
+
+    buttonCapture.onclick = function () {
         // create a canvas and capture a frame from video stream
         var canvas = document.createElement('canvas');
         canvas.width = targetWidth;
@@ -161,7 +183,7 @@ function capture (success, errorCallback, opts) {
         // convert image stored in canvas to base64 encoded image
         var imageData = canvas.toDataURL(encodingType, quality / 100);
 
-        // stop video stream, remove video and button.
+        // stop video stream, remove video and buttons.
         // Note that MediaStream.stop() is deprecated as of Chrome 47.
         if (localMediaStream.stop) {
             localMediaStream.stop();
@@ -182,17 +204,30 @@ function capture (success, errorCallback, opts) {
 
     var successCallback = function (stream) {
         localMediaStream = stream;
+
+        var videoTracks = stream.getVideoTracks();
+        var track = videoTracks[0];
+        var settings = track.getSettings();
+
+        // Update the target sizes to match the camera.
+        targetWidth = settings.width;
+        targetHeight = settings.height;
+
+        video.width = targetWidth;
+        video.height = targetHeight;
+
         if ('srcObject' in video) {
-            video.srcObject = localMediaStream;
+            video.srcObject = stream;
         } else {
-            video.src = window.URL.createObjectURL(localMediaStream);
+            video.src = window.URL.createObjectURL(stream);
         }
-        video.play();
+
         document.body.appendChild(parent);
+        video.play();
     };
 
     if (navigator.getUserMedia) {
-        navigator.getUserMedia({ video: true, audio: false }, successCallback, errorCallback);
+        navigator.getUserMedia({ video: { width: targetWidth, height: targetHeight }, audio: false }, successCallback, errorCallback);
     } else {
         alert('Browser does not support camera :(');
     }
