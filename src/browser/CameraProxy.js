@@ -22,12 +22,19 @@
 var HIGHEST_POSSIBLE_Z_INDEX = 2147483647;
 
 function takePicture (success, error, opts) {
+    var quality = opts[0];
+    var targetWidth = opts[3];
+    var targetHeight = opts[4];
+    var encodingType = opts[5];
+
     if (opts && opts[2] === 1) {
         capture(success, error, opts);
     } else {
         var input = document.createElement('input');
-        input.style.position = 'relative';
-        input.style.zIndex = HIGHEST_POSSIBLE_Z_INDEX;
+        input.accept = 'image/*';
+        input.style.position = 'absolute';
+        input.style.top = '-50px';
+        input.style.visibility = 'hidden';
         input.className = 'cordova-camera-select';
         input.type = 'file';
         input.name = 'files[]';
@@ -35,24 +42,98 @@ function takePicture (success, error, opts) {
         input.onchange = function (inputEvent) {
             var reader = new FileReader(); /* eslint no-undef : 0 */
             reader.onload = function (readerEvent) {
+                var convert = false;
+
                 input.parentNode.removeChild(input);
 
-                var imageData = readerEvent.target.result;
+                var data = readerEvent.target.result;
 
-                return success(imageData.substr(imageData.indexOf(',') + 1));
+                // Strip off the start of the string.
+                var t = data.slice(5, 20);
+                // Split it
+                var a = t.split(';');
+                // Compare with the desired encoding type.
+                if (a[0] !== encodingType) {
+                    // Different encoding type, so force a conversion.
+                    convert = true;
+                }
+
+                // Adjust the image size if needed.
+                if (convert || (targetWidth && targetHeight)) {
+                    var img = document.createElement('img');
+                    img.onerror = error;
+                    img.onload = function (event) {
+                        var canvas, ctx, h, ratio, w;
+
+                        w = img.width;
+                        h = img.height;
+
+                        if (!h || !w) {
+                            error('Unable to determine image size.');
+                            return;
+                        }
+
+                        ratio = w / h;
+                        if (w > targetWidth) {
+                            w = targetWidth;
+                            h = w / ratio;
+                        }
+
+                        if (h > targetHeight) {
+                            h = targetHeight;
+                            w = h * ratio;
+                        }
+
+                        // Convert based on format or if the target is smaller than the source image.
+                        if (convert || w < img.width || h < img.height) {
+                            canvas = document.createElement('canvas');
+                            canvas.width = w;
+                            canvas.height = h;
+
+                            ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, w, h);
+
+                            // Always return a data URL...
+                            data = canvas.toDataURL(encodingType, quality / 100);
+                        }
+
+                        success(data);
+                    };
+
+                    img.setAttribute('src', data);
+                } else {
+                    success(data);
+                }
             };
 
             reader.readAsDataURL(inputEvent.target.files[0]);
         };
 
         document.body.appendChild(input);
+
+        var event;
+
+        if (typeof MouseEvent === 'function') {
+            event = new MouseEvent('click', {
+                view: window,
+                bubbles: true,
+                cancelable: true
+            });
+        } else {
+            event = document.createEvent('UIEvents');
+            event.initUIEvent('click', true, true, window, 1);
+        }
+
+        input.dispatchEvent(event);
     }
 }
 
 function capture (success, errorCallback, opts) {
     var localMediaStream;
+    var quality = opts[0];
     var targetWidth = opts[3];
     var targetHeight = opts[4];
+    var encodingType = opts[5];
 
     targetWidth = targetWidth === -1 ? 320 : targetWidth;
     targetHeight = targetHeight === -1 ? 240 : targetHeight;
@@ -78,8 +159,7 @@ function capture (success, errorCallback, opts) {
         canvas.getContext('2d').drawImage(video, 0, 0, targetWidth, targetHeight);
 
         // convert image stored in canvas to base64 encoded image
-        var imageData = canvas.toDataURL('image/png');
-        imageData = imageData.replace('data:image/png;base64,', '');
+        var imageData = canvas.toDataURL(encodingType, quality / 100);
 
         // stop video stream, remove video and button.
         // Note that MediaStream.stop() is deprecated as of Chrome 47.
