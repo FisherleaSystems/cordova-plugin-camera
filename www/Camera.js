@@ -116,6 +116,7 @@ for (const key in Camera) {
  * - Android
  * - Browser
  * - iOS
+ * - Windows
  *
  * More examples [here](#camera-getPicture-examples). Quirks [here](#camera-getPicture-quirks).
  *
