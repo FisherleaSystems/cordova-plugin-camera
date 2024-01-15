@@ -61,7 +61,8 @@
       "8.0.0": {
         "cordova": ">100"
       }
-    },
+    }
+  },
   "maintainers": [
     {
       "name": "Wayne Fisher",
