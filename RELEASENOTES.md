@@ -55,6 +55,9 @@
 * [GH-764](https://github.com/apache/cordova-plugin-camera/pull/764) ci: remove `travis` & `appveyor`
 * [GH-762](https://github.com/apache/cordova-plugin-camera/pull/762) ci: add `gh-actions` workflows
 
+### 6.0.0 (Feb 8, 2023)
+* This is now a namespaced (@fisherleasystems) version of the camera plugin.
+
 ### 6.0.0 (Aug 19, 2021)
 
 **Feature:**

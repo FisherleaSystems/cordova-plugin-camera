@@ -1,6 +1,6 @@
 {
-  "name": "cordova-plugin-camera",
-  "version": "7.0.1-dev",
+  "name": "@fisherleasystems/cordova-plugin-camera",
+  "version": "7.0.0",
   "description": "Cordova Camera Plugin",
   "types": "./types/index.d.ts",
   "cordova": {
@@ -12,8 +12,8 @@
       "browser"
     ]
   },
-  "repository": "github:apache/cordova-plugin-camera",
-  "bugs": "https://github.com/apache/cordova-plugin-camera/issues",
+  "repository": "github:FisherleaSystems/cordova-plugin-camera",
+  "bugs": "https://github.com/FisherleaSystems/cordova-plugin-camera/issues",
   "keywords": [
     "cordova",
     "camera",
@@ -61,7 +61,15 @@
       "8.0.0": {
         "cordova": ">100"
       }
+    },
+  "maintainers": [
+    {
+      "name": "Wayne Fisher",
+      "email": "wayne@fisherlea.com"
     }
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/FisherleaSystems"
   },
   "devDependencies": {
     "@cordova/eslint-config": "^5.0.0"

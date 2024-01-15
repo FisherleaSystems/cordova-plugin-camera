@@ -70,13 +70,17 @@ var windowsPhoneVideoContainers = ['.avi', '.3gp', '.3g2', '.wmv', '.3gp', '.3g2
 // Default aspect ratio 1.78 (16:9 hd video standard)
 var DEFAULT_ASPECT_RATIO = '1.8';
 
+// Default image quality for conversion to DataURL.
+var DEFAULT_IMAGE_QUALITY = 75;
+
 // Highest possible z-index supported across browsers. Anything used above is converted to this value.
 var HIGHEST_POSSIBLE_Z_INDEX = 2147483647;
 
 // Resize method
-function resizeImage (successCallback, errorCallback, file, targetWidth, targetHeight, encodingType) {
+function resizeImage (successCallback, errorCallback, file, targetWidth, targetHeight, encodingType, quality) {
     var tempPhotoFileName = '';
     var targetContentType = '';
+    var temporaryStorageFile;
 
     if (encodingType === Camera.EncodingType.PNG) {
         tempPhotoFileName = 'camera_cordova_temp_return.png';
@@ -86,9 +90,15 @@ function resizeImage (successCallback, errorCallback, file, targetWidth, targetH
         targetContentType = 'image/jpeg';
     }
 
-    var storageFolder = getAppData().localFolder;
-    file.copyAsync(storageFolder, file.name, Windows.Storage.NameCollisionOption.replaceExisting)
+    if (typeof quality !== 'number') {
+        quality = DEFAULT_IMAGE_QUALITY;
+    }
+    quality /= 100;
+
+    var storageFolder = getAppData().temporaryFolder;
+    file.copyAsync(storageFolder, file.name, Windows.Storage.NameCollisionOption.generateUniqueName)
         .then(function (storageFile) {
+            temporaryStorageFile = storageFile;
             return fileIO.readBufferAsync(storageFile);
         })
         .then(function (buffer) {
@@ -96,6 +106,9 @@ function resizeImage (successCallback, errorCallback, file, targetWidth, targetH
             var imageData = 'data:' + file.contentType + ';base64,' + strBase64;
             var image = new Image(); /* eslint no-undef : 0 */
             image.src = imageData;
+
+            image.onerror = function (err) { errorCallback(err); };
+
             image.onload = function () {
                 var ratio = Math.min(targetWidth / this.width, targetHeight / this.height);
                 var imageWidth = ratio * this.width;
@@ -109,7 +122,7 @@ function resizeImage (successCallback, errorCallback, file, targetWidth, targetH
 
                 canvas.getContext('2d').drawImage(this, 0, 0, imageWidth, imageHeight);
 
-                var fileContent = canvas.toDataURL(targetContentType).split(',')[1];
+                var fileContent = canvas.toDataURL(targetContentType, quality).split(',')[1];
 
                 var storageFolder = getAppData().localFolder;
 
@@ -118,6 +131,9 @@ function resizeImage (successCallback, errorCallback, file, targetWidth, targetH
                         var content = Windows.Security.Cryptography.CryptographicBuffer.decodeFromBase64String(fileContent);
                         storageFileName = storagefile.name;
                         return fileIO.writeBufferAsync(storagefile, content);
+                    })
+                    .then(function () {
+                        return temporaryStorageFile.deleteAsync(Windows.Storage.StorageDeleteOption.permanentDelete);
                     })
                     .done(function () {
                         successCallback('ms-appdata:///local/' + storageFileName);
@@ -130,13 +146,26 @@ function resizeImage (successCallback, errorCallback, file, targetWidth, targetH
 }
 
 // Because of asynchronous method, so let the successCallback be called in it.
-function resizeImageBase64 (successCallback, errorCallback, file, targetWidth, targetHeight) {
+function resizeImageBase64 (successCallback, errorCallback, file, targetWidth, targetHeight, encodingType, quality) {
+    var targetContentType = 'image/jpeg';
+
+    if (encodingType === Camera.EncodingType.PNG) {
+        targetContentType = 'image/png';
+    }
+
+    if (typeof quality !== 'number') {
+        quality = DEFAULT_IMAGE_QUALITY;
+    }
+    quality /= 100;
+
     fileIO.readBufferAsync(file).done(function (buffer) {
         var strBase64 = encodeToBase64String(buffer);
         var imageData = 'data:' + file.contentType + ';base64,' + strBase64;
 
         var image = new Image(); /* eslint no-undef : 0 */
         image.src = imageData;
+
+        image.onerror = function (err) { errorCallback(err); };
 
         image.onload = function () {
             var ratio = Math.min(targetWidth / this.width, targetHeight / this.height);
@@ -151,7 +180,7 @@ function resizeImageBase64 (successCallback, errorCallback, file, targetWidth, t
             ctx.drawImage(this, 0, 0, imageWidth, imageHeight);
 
             // The resized file ready for upload
-            var finalFile = canvas.toDataURL(file.contentType);
+            var finalFile = canvas.toDataURL(targetContentType, quality);
 
             // Remove the prefix such as "data:" + contentType + ";base64," , in order to meet the Cordova API.
             var arr = finalFile.split(',');
@@ -172,6 +201,7 @@ function takePictureFromFile (successCallback, errorCallback, args) {
 
 function takePictureFromFileWP (successCallback, errorCallback, args) {
     var mediaType = args[6];
+    var quality = args[0];
     var destinationType = args[1];
     var targetWidth = args[3];
     var targetHeight = args[4];
@@ -192,7 +222,7 @@ function takePictureFromFileWP (successCallback, errorCallback, args) {
             }
             if (destinationType === Camera.DestinationType.FILE_URI) {
                 if (targetHeight > 0 && targetWidth > 0) {
-                    resizeImage(successCallback, errorCallback, file, targetWidth, targetHeight, encodingType);
+                    resizeImage(successCallback, errorCallback, file, targetWidth, targetHeight, encodingType, quality);
                 } else {
                     var storageFolder = getAppData().localFolder;
                     file.copyAsync(storageFolder, file.name, Windows.Storage.NameCollisionOption.replaceExisting).done(function (storageFile) {
@@ -203,7 +233,7 @@ function takePictureFromFileWP (successCallback, errorCallback, args) {
                 }
             } else {
                 if (targetHeight > 0 && targetWidth > 0) {
-                    resizeImageBase64(successCallback, errorCallback, file, targetWidth, targetHeight);
+                    resizeImageBase64(successCallback, errorCallback, file, targetWidth, targetHeight, encodingType, quality);
                 } else {
                     fileIO.readBufferAsync(file).done(function (buffer) {
                         var strBase64 = encodeToBase64String(buffer);
@@ -233,6 +263,7 @@ function takePictureFromFileWP (successCallback, errorCallback, args) {
 
 function takePictureFromFileWindows (successCallback, errorCallback, args) {
     var mediaType = args[6];
+    var quality = args[0];
     var destinationType = args[1];
     var targetWidth = args[3];
     var targetHeight = args[4];
@@ -257,18 +288,18 @@ function takePictureFromFileWindows (successCallback, errorCallback, args) {
         }
         if (destinationType === Camera.DestinationType.FILE_URI) {
             if (targetHeight > 0 && targetWidth > 0) {
-                resizeImage(successCallback, errorCallback, file, targetWidth, targetHeight, encodingType);
+                resizeImage(successCallback, errorCallback, file, targetWidth, targetHeight, encodingType, quality);
             } else {
                 var storageFolder = getAppData().localFolder;
                 file.copyAsync(storageFolder, file.name, Windows.Storage.NameCollisionOption.replaceExisting).done(function (storageFile) {
-                    successCallback(URL.createObjectURL(storageFile));
+                    successCallback('ms-appdata:///local/' + storageFile.name);
                 }, function () {
                     errorCallback("Can't access localStorage folder.");
                 });
             }
         } else {
             if (targetHeight > 0 && targetWidth > 0) {
-                resizeImageBase64(successCallback, errorCallback, file, targetWidth, targetHeight);
+                resizeImageBase64(successCallback, errorCallback, file, targetWidth, targetHeight, encodingType, quality);
             } else {
                 fileIO.readBufferAsync(file).done(function (buffer) {
                     var strBase64 = encodeToBase64String(buffer);
@@ -681,6 +712,7 @@ function takePictureFromCameraWP (successCallback, errorCallback, args) {
 }
 
 function takePictureFromCameraWindows (successCallback, errorCallback, args) {
+    var quality = args[0];
     var destinationType = args[1];
     var targetWidth = args[3];
     var targetHeight = args[4];
@@ -730,6 +762,7 @@ function takePictureFromCameraWindows (successCallback, errorCallback, args) {
         window.removeEventListener('focus', savePhotoOnFocus);
         // call only when the app is in focus again
         savePhoto(cameraPicture, {
+            quality: quality,
             destinationType: destinationType,
             targetHeight: targetHeight,
             targetWidth: targetWidth,
@@ -755,6 +788,7 @@ function takePictureFromCameraWindows (successCallback, errorCallback, args) {
         // If not windows 10, call savePhoto() now. If windows 10, wait for the app to be in focus again
         if (navigator.appVersion.indexOf('Windows Phone 10.0') < 0) {
             savePhoto(cameraPicture, {
+                quality: quality,
                 destinationType: destinationType,
                 targetHeight: targetHeight,
                 targetWidth: targetWidth,
@@ -773,7 +807,15 @@ function savePhoto (picture, options, successCallback, errorCallback) {
     var success = function (picture) {
         if (options.destinationType === Camera.DestinationType.FILE_URI) {
             if (options.targetHeight > 0 && options.targetWidth > 0) {
-                resizeImage(successCallback, errorCallback, picture, options.targetWidth, options.targetHeight, options.encodingType);
+                resizeImage(function (uri) {
+                    // Don't need the originally captured file anymore now that we have the resized copy.
+                    picture.deleteAsync().done(function () {
+                        successCallback(uri);
+                    }, function () {
+                        // Still a success even if we cannot delete the original file since we do have the new file.
+                        successCallback(uri);
+                    });
+                }, errorCallback, picture, options.targetWidth, options.targetHeight, options.encodingType, options.quality);
             } else {
                 // CB-11714: check if target content-type is PNG to just rename as *.jpg since camera is captured as JPEG
                 if (options.encodingType === Camera.EncodingType.PNG) {
@@ -781,19 +823,35 @@ function savePhoto (picture, options, successCallback, errorCallback) {
                 }
 
                 picture.copyAsync(getAppData().localFolder, picture.name, OptUnique).done(function (copiedFile) {
-                    successCallback('ms-appdata:///local/' + copiedFile.name);
+                    // Don't need the originally captured file anymore now that we have a copy.
+                    picture.deleteAsync().done(function () {
+                        successCallback('ms-appdata:///local/' + copiedFile.name);
+                    }, function () {
+                        // Still a success even if we cannot delete the original file since we do have the new file.
+                        successCallback('ms-appdata:///local/' + copiedFile.name);
+                    });
                 }, errorCallback);
             }
         } else {
             if (options.targetHeight > 0 && options.targetWidth > 0) {
-                resizeImageBase64(successCallback, errorCallback, picture, options.targetWidth, options.targetHeight);
+                resizeImageBase64(function (uri) {
+                    // Don't need the originally captured file anymore now that we have the encoded data.
+                    picture.deleteAsync().done(function () {
+                        successCallback(uri);
+                    }, function () {
+                        // Still a success even if we cannot delete the original file since we do have the encoded data.
+                        successCallback(uri);
+                    });
+                }, errorCallback, picture, options.targetWidth, options.targetHeight, options.encodingType, options.quality);
             } else {
                 fileIO.readBufferAsync(picture).done(function (buffer) {
                     var strBase64 = encodeToBase64String(buffer);
+                    // Don't need the originally captured file anymore now that we have the encoded data.
                     picture.deleteAsync().done(function () {
                         successCallback(strBase64);
-                    }, function (err) {
-                        errorCallback(err);
+                    }, function () {
+                        // Still a success even if we cannot delete the original file since we do have the data.
+                        successCallback(strBase64);
                     });
                 }, errorCallback);
             }
