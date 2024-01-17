@@ -1,6 +1,6 @@
 {
   "name": "@fisherleasystems/cordova-plugin-camera",
-  "version": "7.0.0-dev",
+  "version": "7.0.0",
   "description": "Cordova Camera Plugin",
   "types": "./types/index.d.ts",
   "cordova": {
