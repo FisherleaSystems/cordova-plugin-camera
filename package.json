@@ -1,6 +1,6 @@
 {
   "name": "@fisherleasystems/cordova-plugin-camera",
-  "version": "6.0.0",
+  "version": "7.0.0-dev",
   "description": "Cordova Camera Plugin",
   "types": "./types/index.d.ts",
   "cordova": {
@@ -8,9 +8,7 @@
     "platforms": [
       "android",
       "ios",
-      "browser",
-      "windows",
-      "osx"
+      "browser"
     ]
   },
   "repository": "github:FisherleaSystems/cordova-plugin-camera",
@@ -21,9 +19,7 @@
     "ecosystem:cordova",
     "cordova-android",
     "cordova-ios",
-    "cordova-browser",
-    "cordova-windows",
-    "cordova-osx"
+    "cordova-browser"
   ],
   "scripts": {
     "test": "npm run lint",
@@ -37,10 +33,44 @@
       "email": "wayne@fisherlea.com"
     }
   ],
+  "engines": {
+    "cordovaDependencies": {
+      "3.0.0": {
+        "cordova-android": ">=6.3.0"
+      },
+      "4.1.0": {
+        "cordova-android": ">=6.3.0",
+        "cordova": ">=7.1.0"
+      },
+      "5.0.0": {
+        "cordova-android": ">=9.0.0",
+        "cordova-ios": ">=5.1.0",
+        "cordova": ">=9.0.0"
+      },
+      "5.0.4-dev": {
+        "cordova-android": "<10.0.0",
+        "cordova-ios": ">=5.1.0",
+        "cordova": ">=9.0.0"
+      },
+      "6.0.0": {
+        "cordova-android": ">=10.0.0",
+        "cordova-ios": ">=5.1.0",
+        "cordova": ">=9.0.0"
+      },
+      "7.0.0": {
+        "cordova-android": ">=12.0.0",
+        "cordova-ios": ">=5.1.0",
+        "cordova": ">=9.0.0"
+      },
+      "8.0.0": {
+        "cordova": ">100"
+      }
+    }
+  },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com/FisherleaSystems"
   },
   "devDependencies": {
-    "@cordova/eslint-config": "^3.0.0"
+    "@cordova/eslint-config": "^5.0.0"
   }
 }
